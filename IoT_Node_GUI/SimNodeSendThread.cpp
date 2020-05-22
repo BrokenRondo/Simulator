@@ -1,6 +1,6 @@
 #include "SimNodeSendThread.h"
 #include <QtNetwork/QHostAddress>
-#include <jsoncpp/json.h>
+#include "jsoncpp/json.h"
 #include <cmath>
 #include <iomanip>
 #include <string>
@@ -16,6 +16,7 @@ extern std::vector<TextItem*> GlobalTextVector;
 extern std::vector<QString> GlobalLogVector;
 const int ConsensusStartPort = 60000;
 const int DataNetworkStartPort = 50000;
+
 extern unsigned int node_index;
 //To simulate the range of broadcast, multi-cast is not used, this thread uses uni-cast to control
 //each message, if the destination is out of range, the message will not be sent.

@@ -13,12 +13,15 @@ public:
 	void setSpeed(int speed);
 	void broadcast(std::string str);
 	void stop();
+	void setRandomBroadcast();
+	void terminateRandomBroadcast();
 private:
 	bool stopflag;
 	int waitspeed=300;
 	QUdpSocket *broadcaster;
 	unsigned int index;
 	std::vector<std::string> waitlist;
+	bool randomBroadcast = false;
 };
 
 

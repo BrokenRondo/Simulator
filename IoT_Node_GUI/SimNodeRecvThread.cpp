@@ -3,6 +3,8 @@
 #include "jsoncpp/json.h"
 #include <queue>
 #include <mutex>
+using namespace std;
+
 extern std::vector<MyItem*> GlobalItemVector;
 extern std::vector<MyLine*> GlobalLineVector;
 extern std::vector<TextItem*> GlobalTextVector;
@@ -11,6 +13,9 @@ extern std::queue<QTimer*>GlobalTimerVector;
 const int ConsensusStartPort = 60000;
 const int DataNetworkStartPort = 50000;
 extern unsigned int node_index;
+extern unsigned int dataMSGNumber;
+extern unsigned int consensusMSGNumber;
+
 SimNodeRecvThread::SimNodeRecvThread(unsigned index, uint16_t port,NodeBlockchainDatabase* DB)
 {
 	this->index = index;
@@ -48,6 +53,7 @@ void SimNodeRecvThread::readPendingDatagrams()
 {
 	while (receiver->hasPendingDatagrams())
 	{
+		dataMSGNumber++;
 		char buf[1024] = { 0 };
 		QHostAddress addr;
 		quint16 port;
@@ -57,6 +63,12 @@ void SimNodeRecvThread::readPendingDatagrams()
 		QString recv_time;
 		QString msgString = "";
 		len = receiver->readDatagram(buf, sizeof(buf), &addr, &port);
+		CheckandTerminateAct();
+		if (Sys_Down)
+		{
+			continue;
+		}
+		
 		if (len > 0)
 		{
 			recv_addr = addr.toString();
@@ -88,7 +100,7 @@ void SimNodeRecvThread::readPendingDatagrams()
 		recv_time = QString::fromStdString(root["TIME"].asString());
 		msgString = tr("Received Data { %1 } From %2: %3\n").arg(QString::fromStdString( root["CONTEXT"].asString())).arg(port).arg(recv_time);
 		//emit toGUIAddLog(msgString);
-		AddLog(msgString);
+		//AddLog(msgString);
 		if (GlobalLogVector.size()>0) 
 		{
 			if (GlobalLogVector[index].length() > 500)
@@ -110,8 +122,9 @@ void SimNodeRecvThread::readPendingDatagrams()
 		connect(timer, SIGNAL(timeout()), this, SLOT(slotTimerUpdate()));
 		//
 		//QTimer::singleShot(100, this, SLOT(slotTimerUpdate()));
-		//emit toDBAddMsg(recv_time, recv_addr, recv_port, QString::fromStdString(root["CONTEXT"].asString()));
+		emit toDBAddMsg(recv_time, recv_addr, recv_port, QString::fromStdString(root["CONTEXT"].asString()));
 		AddMsg(recv_time, recv_addr, recv_port, QString::fromStdString(root["CONTEXT"].asString()));
+		CheckandSetAction();
 		
 	}
 }
@@ -169,4 +182,64 @@ void SimNodeRecvThread::toSceneDrawArrow(QPointF src, QPointF dst, QColor color,
 	//QTimer::singleShot(100, this, SLOT(slotTimerUpdate()));
 	emit toScene(1, nullptr, nullptr, src, dst, src, src, color, index);
 }
+
+
+//先把所有的测试放入自己的vector里，然后自行结束。
+//所有测试事件必须前后连接，不能同时发生
+void SimNodeRecvThread::addFAAction(int type, unsigned startTime, unsigned endTime)
+{
+	FATimeItem *startitem = new FATimeItem;
+	FATimeItem *enditem = new FATimeItem;
+	startitem->type = type;
+	enditem->type = type;
+	startitem->time = startTime;
+	FAStartVector.push_back(startitem);
+	sort(FAStartVector.begin(), FAStartVector.end(), less_sort);
+	enditem->time = endTime;
+	FAEndVector.push_back(enditem);
+	sort(FAEndVector.begin(), FAEndVector.end(), less_sort);
+}
+void SimNodeRecvThread::CheckandSetAction()
+{
+	if (!FAStartVector.empty())
+	{
+		//如果有需要开始的Action
+		if (FAStartVector.front()->time<=viewNumber)
+		{
+			switch (FAStartVector.front()->type)
+			{
+			case 0:
+				Sys_Down = true; break;
+			case 1:
+				Wrong_Fault = true; break;
+			case 2:
+				Random_Fault = true; break;
+			}
+			FAStartVector.pop_front();
+		}
+	
+	}
+}
+void SimNodeRecvThread::CheckandTerminateAct()
+{
+	if (!this->FAEndVector.empty())
+	{
+
+		if (this->FAEndVector.front()->time <= viewNumber)
+		{
+			switch (FAEndVector.front()->type)
+			{
+			case 0:
+				Sys_Down = false; break;
+			case 1:
+				Wrong_Fault = false; break;
+			case 2:
+				Random_Fault = false; break;
+			}
+			FAEndVector.pop_front();
+		}
+	}
+}
+
+
 

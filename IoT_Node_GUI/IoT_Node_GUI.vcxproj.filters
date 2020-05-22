@@ -35,6 +35,9 @@
     <Filter Include="MerkleTree">
       <UniqueIdentifier>{cc8e69cf-b8d0-4e35-adfd-6ddc14a24d57}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Experiment">
+      <UniqueIdentifier>{080d90ed-a688-4c90-9720-fedafea27e5c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -121,6 +124,15 @@
     <ClCompile Include="broadcastThread.cpp">
       <Filter>Consensus</Filter>
     </ClCompile>
+    <ClCompile Include="Overhead.cpp">
+      <Filter>Experiment</Filter>
+    </ClCompile>
+    <ClCompile Include="FATestWidget.cpp">
+      <Filter>Experiment</Filter>
+    </ClCompile>
+    <ClCompile Include="FaultAttackTest.cpp">
+      <Filter>Experiment</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="IoT_Node_GUI.h">
@@ -156,6 +168,12 @@
     <QtMoc Include="Consensus.h">
       <Filter>Consensus</Filter>
     </QtMoc>
+    <QtMoc Include="Overhead.h">
+      <Filter>Experiment</Filter>
+    </QtMoc>
+    <QtMoc Include="FATestWidget.h">
+      <Filter>Experiment</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="IoT_Node_GUI.ui">
@@ -168,6 +186,9 @@
       <Filter>Form Files</Filter>
     </QtUic>
     <QtUic Include="NodeLog.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="FATestWidget.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>
@@ -257,6 +278,9 @@
     </ClInclude>
     <ClInclude Include="DeleteLineThread.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FaultAttackTest.h">
+      <Filter>Experiment</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

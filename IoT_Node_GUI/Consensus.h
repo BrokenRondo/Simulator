@@ -8,10 +8,13 @@
 #include "osapi/Thread.h"
 #include "myitem.h"
 #include "myline.h"
+#include "Global.h"
 #include "broadcastThread.h"
-
+#include <deque>
 class SimNodeRecvThread;
 class MyItem;
+struct FATimeItem;
+
 struct ConsensusMSG
 {
 	int view = 0;
@@ -37,12 +40,11 @@ public:
 	int MainNodeRNG();
 	void setMainNodeRNGSeed(int seed);
 	int chooseMainNode();
+	void addFAAction(int type, unsigned startTime, unsigned endTime);
 	BroadcastThread* broadcast_;
 signals:
 	void toSceneDrawArrow(unsigned int, MyItem*, MyLine*, QPointF, QPointF, QPointF, QPointF, QColor, unsigned int index);
 	void toSceneDeleteLine(unsigned int);
-
-	
 private:
 	bool ConsensusTime();
 	bool ProposeTime();
@@ -83,7 +85,19 @@ private:
 	bool verifyFlag = false;
 	std::string mainnodeValue;
 
-
+	bool Sys_Down = false;//The symbol of fault/attack test
+	unsigned int SysDownStartTime = 0;
+	unsigned int SysDownEndTime = 1;
+	bool Wrong_Fault = false;
+	unsigned int WrongFaultStartTime = 0;
+	unsigned int NextActionEndTime = 1;
+	bool Random_Fault = false;
+	unsigned int RandomFaultStartTime = 0;
+	std::deque<FATimeItem*> FAStartVector;
+	std::deque<FATimeItem*> FAEndVector;
+	void CheckandSetAction();
+	void CheckandTerminateAct();
+	
 private slots:
 	void readPendingDatagrams();
 	

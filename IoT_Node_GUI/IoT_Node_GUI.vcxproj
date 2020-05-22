@@ -51,11 +51,11 @@
   </ImportGroup>
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <QtInstall>msvc2017_64</QtInstall>
-    <QtModules>core;gui;network;widgets</QtModules>
+    <QtModules>charts;core;gui;network;widgets</QtModules>
   </PropertyGroup>
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <QtInstall>msvc2017_64</QtInstall>
-    <QtModules>core;gui;network;widgets</QtModules>
+    <QtModules>charts;core;gui;network;widgets</QtModules>
   </PropertyGroup>
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.props')">
     <Import Project="$(QtMsBuild)\qt.props" />
@@ -67,13 +67,13 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <AdditionalIncludeDirectories>E:\Visual Studio Projects\source\repos\IoT_Node_GUI\IoT_Node_GUI\MerkleTree\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\MerkleTree\include;.\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\Visual Studio Projects\source\repos\IoT_Node_GUI\IoT_Node_GUI\MerkleTree\lib;C:\Qt\Qt5.10.1\5.10.1\msvc2017_64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\IoT_Node_GUI\IoT_Node_GUI\MerkleTree\lib;C:\Qt\Qt5.10.1\5.10.1\msvc2017_64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <StackReserveSize>100000</StackReserveSize>
       <HeapReserveSize>
       </HeapReserveSize>
@@ -86,13 +86,13 @@
       <DebugInformationFormat />
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <AdditionalIncludeDirectories>E:\Visual Studio Projects\source\repos\IoT_Node_GUI\IoT_Node_GUI\MerkleTree\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Visual Studio Projects\source\repos\IoT_Node_GUI\IoT_Node_GUI\MerkleTree\include;.\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\Visual Studio Projects\source\repos\IoT_Node_GUI\IoT_Node_GUI\MerkleTree\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>.\IoT_Node_GUI\MerkleTree\lib;.\IoT_Node_GUI\IoT_Node_GUI\MerkleTree\include;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <HeapReserveSize>10240000</HeapReserveSize>
     </Link>
   </ItemDefinitionGroup>
@@ -101,6 +101,8 @@
     <ClCompile Include="broadcastThread.cpp" />
     <ClCompile Include="ChangeRangeDialog.cpp" />
     <ClCompile Include="Consensus.cpp" />
+    <ClCompile Include="FATestWidget.cpp" />
+    <ClCompile Include="FaultAttackTest.cpp" />
     <ClCompile Include="Global.cpp" />
     <ClCompile Include="InteractiveView.cpp" />
     <ClCompile Include="IoT_Network_Scene.cpp" />
@@ -120,6 +122,7 @@
     <ClCompile Include="osapi\Socket.cpp" />
     <ClCompile Include="osapi\Thread_Linux.cpp" />
     <ClCompile Include="osapi\Thread_Win32.cpp" />
+    <ClCompile Include="Overhead.cpp" />
     <ClCompile Include="RangeItem.cpp" />
     <ClCompile Include="SimNodeRecvThread.cpp" />
     <ClCompile Include="SimNodeSendThread.cpp" />
@@ -131,6 +134,7 @@
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="ChangeRangeDialog.ui" />
+    <QtUic Include="FATestWidget.ui" />
     <QtUic Include="IoT_Node_GUI.ui" />
     <QtUic Include="NodeBlockchainDatabase.ui" />
     <QtUic Include="NodeLog.ui" />
@@ -145,6 +149,8 @@
     <QtMoc Include="Consensus.h" />
     <ClInclude Include="broadcastThread.h" />
     <ClInclude Include="DeleteLineThread.h" />
+    <QtMoc Include="FATestWidget.h" />
+    <ClInclude Include="FaultAttackTest.h" />
     <ClInclude Include="Global.h" />
     <ClInclude Include="MerkleTree\binarytree.h" />
     <ClInclude Include="MerkleTree\merkletree.h" />
@@ -153,6 +159,7 @@
     <ClInclude Include="osapi\Semaphore.h" />
     <ClInclude Include="osapi\Socket.h" />
     <ClInclude Include="osapi\Thread.h" />
+    <QtMoc Include="Overhead.h" />
     <ClInclude Include="util.h" />
     <QtMoc Include="InteractiveView.h" />
     <ClInclude Include="jsoncpp\allocator.h" />

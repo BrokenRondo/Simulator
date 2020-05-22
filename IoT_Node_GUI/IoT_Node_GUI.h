@@ -4,7 +4,7 @@
 #include "ui_IoT_Node_GUI.h"
 #include "IoT_Network_Scene.h"
 #include "actThread.h"
-
+#include "Global.h"
 
 class IoT_Node_GUI : public QMainWindow
 {
@@ -19,6 +19,7 @@ private:
 	InteractiveView* View;
 	actThread* thread = nullptr;
 	bool started = false;
+	std::vector<FAItem> ReadTableWidget();
 private slots:
 	void AddItemClicked();
 	void StartClicked();
@@ -31,6 +32,8 @@ private slots:
 	void setRange();
 	void slotTimerUpdate();
 	void ChangeConsensusSpeed(int speed);
+public slots:
+	void insertTest(FATestStruct);
 protected:
 	void paintEvent(QPaintEvent* event);
 };

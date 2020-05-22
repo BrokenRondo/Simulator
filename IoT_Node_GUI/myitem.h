@@ -64,6 +64,7 @@ public slots:
 	void ChangeRangeTriggered();
 	void ShowBCDatabase();
 	void ShowLog();
+	void showAddTestWidget();
 
 signals:
 	void askSceneDelete(MyItem* toDeleteItem);

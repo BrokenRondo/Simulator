@@ -14,7 +14,9 @@
 #include <QTextCursor>
 #include "myline.h"
 #include "ChangeRangeDialog.h"
-
+#include "IoT_Node_GUI.h"
+#include "FATestWidget.h"
+#include "Global.h"
 using namespace::std;
 extern std::vector<MyItem*> GlobalItemVector;
 extern std::vector<MyLine*> GlobalLineVector;
@@ -25,7 +27,7 @@ const int DataNetworkStartPort = 50000;
 extern int fieldSize;
 extern int rangeSize;
 extern unsigned int node_index;
-
+extern IoT_Node_GUI* GUI;
 MyItem::MyItem(unsigned int index,unsigned int r)
 {
 	srand((unsigned)time(0));
@@ -228,6 +230,7 @@ void MyItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 	QMenu menu;
 	QAction *removeAction = menu.addAction("Remove");
 	QAction *selectedAction = menu.addAction("Select");
+	QAction* AddFaut_AttackTest = menu.addAction("AddTestAction");
 	QAction *showRange = menu.addAction("ShowRange");
 	QAction *HideRange = menu.addAction("HideRange");
 	QAction *changeRange = menu.addAction("ChangeRange");
@@ -238,6 +241,7 @@ void MyItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 	connect(HideRange, SIGNAL(triggered()), this, SLOT(HideRange()));
 	connect(changeRange, SIGNAL(triggered()), this, SLOT(ChangeRangeTriggered()));
 	connect(showBlockchainData, SIGNAL(triggered()), this->receiver, SLOT(showDB()));
+	connect(AddFaut_AttackTest, SIGNAL(triggered()), this, SLOT(showAddTestWidget()));
 	//connect(showLog, SIGNAL(triggered()), this, SLOT(ShowLog()));
 	menu.exec(event->screenPos());
 
@@ -245,6 +249,12 @@ void MyItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 void MyItem::slotRemoveItem()
 {
 	emit askSceneDelete(this);
+}
+void MyItem::showAddTestWidget()
+{
+	FATestWidget* testWidget = new FATestWidget(this->index);
+	connect(testWidget, SIGNAL(AddFATest(FATestStruct)), GUI, SLOT(insertTest(FATestStruct)));
+	testWidget->show();
 }
 
 

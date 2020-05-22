@@ -5,7 +5,7 @@
 #include "TextItem.h"
 #include "myline.h"
 #include "jsoncpp/json.h"
-
+#include "Global.h"
 extern std::vector<MyItem*> GlobalItemVector;
 extern std::vector<MyLine*> GlobalLineVector;
 extern std::vector<TextItem*> GlobalTextVector;
@@ -13,10 +13,13 @@ extern std::vector<QString> GlobalLogVector;
 const int ConsensusStartPort = 60000;
 const int DataNetworkStartPort = 50000;
 const int ConsensusProposePort = 40000;
+extern unsigned int dataMSGNumber;
+extern unsigned int consensusMSGNumber;
 extern unsigned int node_index;
 extern time_t start;
 extern time_t end;
 extern unsigned int ConsensusGap;
+extern unsigned int viewNumber=0;
 struct MsgCount
 {
 	QString msg = "";
@@ -108,7 +111,8 @@ bool Consensus::MainnodeTime()
 int Consensus::MainNodeRNG()
 {
 	seed = seed * 1103515245 + 15132;
-	return (unsigned int)(seed / 65536) % 3276815;
+	//return (unsigned int)(seed / 65536) % 3276815;
+	return viewNumber % 10+1;//For test
 }
 void Consensus::setMainNodeRNGSeed(int seed)
 {
@@ -135,7 +139,7 @@ unsigned Consensus::getMajority(std::vector<ConsensusMSG> MsgVector, QString& ma
 	std::vector<MsgCount> msgCount;
 	for (int i=0;i<MsgVector.size();i++)
 	{
-		MsgCount msg_t = {QString::fromStdString( MsgVector[i].content),0,this->consensusView,this->round };
+		MsgCount msg_t = {QString::fromStdString( MsgVector[i].content),0,viewNumber,this->round };
 		std::vector<MsgCount>::iterator result = std::find(msgCount.begin(), msgCount.end(), msg_t);
 		if (result==msgCount.end())
 		{
@@ -193,6 +197,7 @@ int Consensus::Routine()
 	Json::FastWriter writer;
 	while (!stopflag)
 	{
+		CheckandTerminateAct();
 		Msleep(500);
 		state = waiting;
 		if (!ConsensusTime())
@@ -205,6 +210,10 @@ int Consensus::Routine()
 		this->n = GlobalItemVector.size();
 		this->f = std::floor(GlobalItemVector.size() / 3);
 		consensusView++;
+		if (this->index==1)
+		{
+			viewNumber++;
+		}
 		recvMSG.clear();
 		proposeMSG.clear();
 		mainNodeMSG.clear();
@@ -219,20 +228,24 @@ int Consensus::Routine()
 			//发送线程只要管发送的事Send Thread only need to handle sending
 			//获取到一定时间段内的默克尔树后就发送给周围的节点
 			state = ready_to_broadcast;
-
-			root["VIEW"] = this->consensusView;
+			root.clear();
+			root["VIEW"] = viewNumber;
 			root["TYPE"] = 0;
 			root["CONTENT"] = MerkleTreeRoot.toStdString();
 			root["ROUND"] = this->round;
 			root["SIGNATURE"] = this->port;
 			std::string strTobeBroadcast = writer.write(root);
 			//int t = (rand()*rand())%1000;
-			Msleep( (rand()*rand()%300));
+			Msleep( (rand()*rand()%1000));
 			Util util;
 			std::string time = util.utilLocalTimeStr();
 			//this->broadcast_->setSpeed(30);
 			//this->broadcast_->broadcast(strTobeBroadcast);
-			broadcast(strTobeBroadcast);
+			if (!Sys_Down)
+			{
+				broadcast(strTobeBroadcast);
+			}
+			
 			QString log = tr("Consensus time: %1, broadcast value: %2\n").arg(QString::fromStdString(time)).arg(MerkleTreeRoot);
 			state = propose_1;
 			root.clear();
@@ -241,22 +254,40 @@ int Consensus::Routine()
 			{
 				Msleep(200);
 			}
-			setMainNodeRNGSeed(this->consensusView);
+			setMainNodeRNGSeed(viewNumber);
 			thisViewMainNode = chooseMainNode();
 
 			if (thisViewMainNode == this->index)
 			{
 				//If this node is the main node
 				Msleep(1);//wait the gap
-				root["VIEW"] = this->consensusView;
+				if (Wrong_Fault)
+				{
+					root["CONTENT"] = MerkleTreeRootT.toStdString()+"wrong";
+				}
+				else
+				{
+					root["CONTENT"] = MerkleTreeRootT.toStdString();
+				}
+				root["VIEW"] = viewNumber;
 				root["TYPE"] = 2;
 				root["ROUND"] = this->round;
-				root["CONTENT"] = MerkleTreeRootT.toStdString();
+				
 				root["SIGNATURE"] = this->port;
 				std::string str = writer.write(root);
 				//broadcast(str);
 				this->broadcast_->setSpeed(1);
-				this->broadcast_->broadcast(str);
+				if (!Sys_Down)
+				{
+					if (Random_Fault)
+					{
+						this->broadcast_->setRandomBroadcast();
+						this->broadcast_->broadcast(str);
+					}
+					else
+						this->broadcast_->broadcast(str);
+				}
+				
 			}
 			if (MerkleTreeRootT==MerkleTreeRoot&&round==0)
 			{
@@ -282,14 +313,14 @@ int Consensus::Routine()
 			round++;
 			Msleep(1000);
 		}
-		if (verifyFlag)
+		if (verifyFlag)//还要设置与条件：没有Down
 		{
 			Msleep(10 * 1000);
 			//验证是否正确,需要进行二值共识，如果二值共识值为1则将这个值加入区块链，然后判断有哪些没上链
 			//否则回滚
 			verifyFlag = false;
 		}
-		
+		CheckandSetAction();
 	}
 	
 	return 0;
@@ -302,6 +333,10 @@ void Consensus::readPendingDatagrams()
 	Json::Reader reader;
 	while (udpsocket->hasPendingDatagrams())
 	{
+		//CheckandTerminateAct();
+
+		
+		//consensusMSGNumber++;
 		char buf[1024] = { 0 };
 		QHostAddress addr;
 		quint16 port;
@@ -311,6 +346,10 @@ void Consensus::readPendingDatagrams()
 		QString recv_time;
 		QString msgString = "";
 		len = udpsocket->readDatagram(buf, sizeof(buf), &addr, &port);
+		if (Sys_Down)
+		{
+			continue;
+		}
 		if (len < 0)
 		{
 			QString msg = "Received Wrong Data, Error code:0x00000001.\n";
@@ -342,7 +381,7 @@ void Consensus::readPendingDatagrams()
 			{
 				this->receiver->toSceneDrawArrow(a, GlobalItemVector[index]->getCentre(), Qt::red, index);
 			}
-			if (root["VIEW"].asInt()==this->consensusView)
+			if (root["VIEW"].asInt()==viewNumber)
 			{
 				std::string content = root["CONTENT"].asString();
 				ConsensusMSG consensusMsg;
@@ -350,12 +389,12 @@ void Consensus::readPendingDatagrams()
 				consensusMsg.content = content;
 				consensusMsg.signature = signature;
 				consensusMsg.uploader = src;
-				consensusMsg.view = this->consensusView;
+				consensusMsg.view = viewNumber;
 				consensusMsg.round = root["ROUND"].asInt();
 				recvMSG.push_back(consensusMsg);
 				Util util;
 				QString time = QString::fromStdString(util.utilLocalTimeStr());
-				QString log = tr("%1 :Received value from %2 :%3, view:%4,round:%5\n").arg(time).arg(src).arg(QString::fromStdString(content)).arg(this->consensusView).arg(root["ROUND"].asInt());
+				QString log = tr("%1 :Received value from %2 :%3, view:%4,round:%5\n").arg(time).arg(src).arg(QString::fromStdString(content)).arg(viewNumber).arg(root["ROUND"].asInt());
 				receiver->AddLog(log);
 			}
 			break;
@@ -365,7 +404,7 @@ void Consensus::readPendingDatagrams()
 			{
 				this->receiver->toSceneDrawArrow(a, GlobalItemVector[index]->getCentre(), Qt::green, index);
 			}
-			if (root["VIEW"].asInt() == this->consensusView)
+			if (root["VIEW"].asInt() == viewNumber)
 			{
 				std::string content = root["CONTENT"].asString();
 				ConsensusMSG consensusMsg;
@@ -373,12 +412,12 @@ void Consensus::readPendingDatagrams()
 				consensusMsg.content = content;
 				consensusMsg.signature = signature;
 				consensusMsg.uploader = src;
-				consensusMsg.view = this->consensusView;
+				consensusMsg.view = viewNumber;
 				consensusMsg.round = root["ROUND"].asInt();
 				proposeMSG.push_back(consensusMsg);
 				Util util;
 				QString time = QString::fromStdString(util.utilLocalTimeStr());
-				QString log = tr("%1 :Received propose from %2 :%3,view:%4,round:%5\n").arg(time).arg(src).arg(QString::fromStdString(content)).arg(this->consensusView).arg(root["ROUND"].asInt());
+				QString log = tr("%1 :Received propose from %2 :%3,view:%4,round:%5\n").arg(time).arg(src).arg(QString::fromStdString(content)).arg(viewNumber).arg(root["ROUND"].asInt());
 				receiver->AddLog(log);
 			}
 			break;
@@ -389,7 +428,7 @@ void Consensus::readPendingDatagrams()
 				QColor color(128, 0, 128);
 				this->receiver->toSceneDrawArrow(a, GlobalItemVector[index]->getCentre(), color, index);
 			}
-			if (root["VIEW"].asInt() == this->consensusView)
+			if (root["VIEW"].asInt() == viewNumber)
 			{
 				std::string content = root["CONTENT"].asString();
 				ConsensusMSG consensusMsg;
@@ -397,7 +436,7 @@ void Consensus::readPendingDatagrams()
 				consensusMsg.content = content;
 				consensusMsg.signature = signature;
 				consensusMsg.uploader = src;
-				consensusMsg.view = this->consensusView;
+				consensusMsg.view = viewNumber;
 				consensusMsg.round = root["ROUND"].asInt();
 				//proposeMSG.push_back(consensusMsg);
 				Util util;
@@ -406,7 +445,7 @@ void Consensus::readPendingDatagrams()
 				if (content!=MerkleTreeRootT.toStdString())
 				{
 					mainnodeValue = content;
-					if (recv_port!=thisViewMainNode)
+					if (recv_port.toInt()-ConsensusProposePort!=thisViewMainNode)
 					{
 						QString msg = tr("Received bad data.Mainnode not valid,thisViewMainNode=%1,sender=%2\n").arg(thisViewMainNode).arg(recv_port);
 						receiver->AddLog(msg);
@@ -415,7 +454,7 @@ void Consensus::readPendingDatagrams()
 					//如果来自临时主节点的值不同于之前的临时MerkleTreeRoot,并且满足改变条件那么改变值
 					//首先取出众数，然后判断是否满足n-f的条件
 					QString majorString = "";
-					unsigned int Max = getMajority(proposeMSG, majorString,this->consensusView,this->round);
+					unsigned int Max = getMajority(proposeMSG, majorString,viewNumber,this->round);
 					if (Max<n-f)
 					{
 						MerkleTreeRootT = QString::fromStdString(content);
@@ -435,11 +474,11 @@ void Consensus::readPendingDatagrams()
 		if (recvMSG.size()>=n-f)
 		{
 			QString majorString = "";
-			unsigned int majorCount = getMajority(recvMSG, majorString, this->consensusView, this->round);
+			unsigned int majorCount = getMajority(recvMSG, majorString, viewNumber, this->round);
 			if (majorCount>=n-f&&state==propose_1)
 			{
 
-				root["VIEW"] = this->consensusView;
+				root["VIEW"] = viewNumber;
 				root["TYPE"] = 1;
 				root["ROUND"] = this->round;
 				root["CONTENT"] = majorString.toStdString();
@@ -448,7 +487,7 @@ void Consensus::readPendingDatagrams()
 				QString log= tr("received more than n-f value(%1), broadcast propose(%1)\n").arg(majorString);
 				this->receiver->AddLog(log);
 				//broadcast(str);
-				this->broadcast_->setSpeed(25);
+				this->broadcast_->setSpeed(10);
 				this->broadcast_->broadcast(str);
 				state = propose_2;
 				proposeFlag = true;
@@ -458,7 +497,7 @@ void Consensus::readPendingDatagrams()
 		{
 			
 			QString majorString = "";
-			unsigned int majorCount = getMajority(proposeMSG, majorString, this->consensusView, this->round);
+			unsigned int majorCount = getMajority(proposeMSG, majorString, viewNumber, this->round);
 			if (majorCount>=f)
 			{
 				state = change_propose;
@@ -477,7 +516,66 @@ void Consensus::readPendingDatagrams()
 				
 			}
 		}
-		
+		//CheckandSetAction();
 	}
+}
+
+
+
+void Consensus::CheckandSetAction()
+{
+	if (!FAStartVector.empty())
+	{
+		//如果有需要开始的Action
+		if (FAStartVector.front()->time <= viewNumber)
+		{
+			switch (FAStartVector.front()->type)
+			{
+			case 0:
+				Sys_Down = true; break;
+			case 1:
+				Wrong_Fault = true; break;
+			case 2:
+				Random_Fault = true; break;
+			}
+			FAStartVector.pop_front();
+		}
+
+	}
+}
+
+void Consensus::CheckandTerminateAct()
+{
+	if (!this->FAEndVector.empty())
+	{
+
+		if (this->FAEndVector.front()->time <= viewNumber)
+		{
+			switch (FAEndVector.front()->type)
+			{
+			case 0:
+				Sys_Down = false; break;
+			case 1:
+				Wrong_Fault = false; break;
+			case 2:
+				Random_Fault = false; this->broadcast_->terminateRandomBroadcast();  break;
+			}
+			FAEndVector.pop_front();
+		}
+	}
+}
+
+void Consensus::addFAAction(int type, unsigned startTime, unsigned endTime)
+{
+	FATimeItem *startitem = new FATimeItem;
+	FATimeItem *enditem = new FATimeItem;
+	startitem->type = type;
+	enditem->type = type;
+	startitem->time = startTime;
+	FAStartVector.push_back(startitem);
+	std::sort(FAStartVector.begin(), FAStartVector.end(), less_sort);
+	enditem->time = endTime;
+	FAEndVector.push_back(enditem);
+	std::sort(FAEndVector.begin(), FAEndVector.end(), less_sort);
 }
 
